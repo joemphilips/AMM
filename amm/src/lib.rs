@@ -7,6 +7,7 @@ pub mod dto;
 pub mod entity;
 
 use amplify::{Display, Error, From};
+use cfmm::FundingError;
 
 /// Purchase smaller than this will be considered as 0.
 pub const MINIMAL_PURCHASE: f64 = 0.000001;
@@ -20,6 +21,8 @@ pub enum AMMError {
     BogusLiquidityParam,
     /// Error when tried to purchase some securities
     PurchaseError(PurchaseError),
+    /// Error for funding the CFMM.
+    FundingError(FundingError),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Display, Error, From)]

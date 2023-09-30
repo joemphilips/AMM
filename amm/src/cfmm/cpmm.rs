@@ -1,5 +1,5 @@
-use crate::PurchaseError;
 use crate::cfmm::ConstantFunctionMarketMaker;
+use crate::PurchaseError;
 
 /// Constant Product Market Maker.
 /// It was originally used in Uniswap.
@@ -15,7 +15,7 @@ pub struct ConstantProductMarketScoringRule {
 
 impl ConstantProductMarketScoringRule {}
 
-impl ConstantFunctionMarketMaker  for ConstantProductMarketScoringRule {
+impl ConstantFunctionMarketMaker for ConstantProductMarketScoringRule {
     fn local_assets(&self) -> &[f64] {
         self.local_assets.as_ref()
     }
@@ -23,5 +23,4 @@ impl ConstantFunctionMarketMaker  for ConstantProductMarketScoringRule {
     fn local_assets_mut(&mut self) -> &mut [f64] {
         self.local_assets.as_mut()
     }
-
 }
