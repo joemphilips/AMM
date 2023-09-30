@@ -18,7 +18,7 @@ impl LSLMScoringRule {
             Err(AMMError::OutcomeLessThanTwo)
         } else if !alpha.is_normal() || alpha.is_sign_negative() {
             Err(AMMError::BogusLiquidityParam)
-        } else if alpha < MINIMAL_LIQUIDITY_A  {
+        } else if alpha < MINIMAL_LIQUIDITY_A {
             Err(AMMError::BogusLiquidityParam)
         } else {
             Ok(Self {

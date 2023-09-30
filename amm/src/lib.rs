@@ -1,7 +1,7 @@
+pub mod cfmm;
 pub mod lmsr;
 pub mod ls_lmsr;
 pub mod lsmr_logsumexp;
-pub mod cpmm;
 
 pub mod dto;
 pub mod entity;
@@ -36,7 +36,11 @@ pub enum PurchaseError {
 
     /// Must give an purchase vector which has the exactly the same length
     /// with number of possible outcomes.
-    WrongPurchaseLength
+    WrongPurchaseLength,
+
+    /// Some market maker does not allow buying morethan two assets at once,
+    /// this error is returned when you tried to do so.
+    PurchaseMustBeOneAssetEach,
 }
 
 fn is_fine_purchase(purchase_vector: &[f64]) -> Result<(), PurchaseError> {
@@ -75,7 +79,7 @@ pub trait MarketScoringRule {
         is_fine_purchase(purchase_vector)?;
         let total_securities = self.total_securities_mut();
         if total_securities.len() != purchase_vector.len() {
-            return Err(PurchaseError::WrongPurchaseLength)
+            return Err(PurchaseError::WrongPurchaseLength);
         }
         for (s, p) in total_securities.iter_mut().zip(purchase_vector) {
             *s += p;
@@ -89,7 +93,7 @@ mod tests {
     use crate::lmsr::LMScoringRule as LMSR;
     use crate::ls_lmsr::LSLMScoringRule;
     use crate::lsmr_logsumexp::LMScoringRule as LogSumExpLMSR;
-    use crate::{is_fine_purchase, MarketScoringRule, AMMError};
+    use crate::{is_fine_purchase, AMMError, MarketScoringRule};
     use proptest::prelude::*;
 
     fn approx_equal(a: f64, b: f64, diff: f64) -> bool {
@@ -110,14 +114,13 @@ mod tests {
     }
 
     fn arb_purchase_scalar() -> impl Strategy<Value = f64> {
-        any::<f64>()
-            .prop_filter_map("Purchase vector must be non-zero sane value", |q| {
-                if !q.is_nan() && !q.is_infinite() {
-                    Some(q.abs())
-                } else {
-                    None
-                }
-            })
+        any::<f64>().prop_filter_map("Purchase vector must be non-zero sane value", |q| {
+            if !q.is_nan() && !q.is_infinite() {
+                Some(q.abs())
+            } else {
+                None
+            }
+        })
     }
 
     fn arb_purchase_vector(max_size: usize) -> impl Strategy<Value = Vec<f64>> {
@@ -125,19 +128,19 @@ mod tests {
             .prop_filter("Must be fine purchase", |v| is_fine_purchase(v).is_ok())
     }
 
-    fn arb_purchase_vectors
-        (dimension: usize, max_size: usize) -> impl Strategy<Value = Vec<Vec<f64>>> {
-        let arb_vector =
-            proptest::collection::vec(arb_purchase_scalar(), dimension)
+    fn arb_purchase_vectors(
+        dimension: usize,
+        max_size: usize,
+    ) -> impl Strategy<Value = Vec<Vec<f64>>> {
+        let arb_vector = proptest::collection::vec(arb_purchase_scalar(), dimension)
             .prop_filter("Must be fine purchase", |v| is_fine_purchase(v).is_ok());
         proptest::collection::vec(arb_vector, 1..max_size)
     }
 
     fn arb_liquidity_param() -> impl Strategy<Value = f64> {
-        any::<f64>()
-            .prop_filter("must be positive normal number", |b| {
-                b.is_normal() && !b.is_sign_negative()
-            })
+        any::<f64>().prop_filter("must be positive normal number", |b| {
+            b.is_normal() && !b.is_sign_negative()
+        })
     }
 
     proptest! {
@@ -161,13 +164,12 @@ mod tests {
         }
     }
 
-    fn get_all_marketmakers (dimension: usize, param: f64) -> Vec<Box<dyn MarketScoringRule>> {
+    fn get_all_marketmakers(dimension: usize, param: f64) -> Vec<Box<dyn MarketScoringRule>> {
         vec![
             Box::new(LMSR::try_create(dimension, param).unwrap()),
             Box::new(LogSumExpLMSR::try_create(dimension, param).unwrap()),
-            Box::new(LSLMScoringRule::try_create(dimension, param).unwrap())
+            Box::new(LSLMScoringRule::try_create(dimension, param).unwrap()),
         ]
-
     }
 
     proptest! {
@@ -202,7 +204,7 @@ mod tests {
         let (r1, r2, r3) = (
             LMSR::try_create(2, liquidity),
             LogSumExpLMSR::try_create(2, liquidity),
-            LSLMScoringRule::try_create(2, liquidity)
+            LSLMScoringRule::try_create(2, liquidity),
         );
         assert_eq!(r1.unwrap_err(), AMMError::BogusLiquidityParam);
         assert_eq!(r2.unwrap_err(), AMMError::BogusLiquidityParam);
@@ -211,7 +213,7 @@ mod tests {
         let (r1, r2, r3) = (
             LMSR::try_create(2, liquidity),
             LogSumExpLMSR::try_create(2, liquidity),
-            LSLMScoringRule::try_create(2, liquidity)
+            LSLMScoringRule::try_create(2, liquidity),
         );
         assert!(r1.is_ok());
         assert!(r2.is_ok());
@@ -220,9 +222,7 @@ mod tests {
 
     #[test]
     fn unittest1() {
-        let test_cases = [
-            (vec![1.0, 736.0], 20.)
-        ];
+        let test_cases = [(vec![1.0, 736.0], 20.)];
 
         for (purchase_vector, liquidity) in test_cases {
             let mut msr1 = LMSR::try_create(2, liquidity).unwrap();
