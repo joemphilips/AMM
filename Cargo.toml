@@ -1,0 +1,20 @@
+[workspace]
+
+resolver="2"
+
+members = [
+  "amm",
+  "amm-server",
+  "rust-dlc/bitcoin-test-utils",
+  "rust-dlc/bitcoin-rpc-provider",
+  "rust-dlc/p2pd-oracle-client",
+  "rust-dlc/dlc",
+  "rust-dlc/dlc-messages",
+  "rust-dlc/dlc-trie",
+  "rust-dlc/dlc-manager",
+  "rust-dlc/mocks",
+  "rust-dlc/sample",
+  "rust-dlc/simple-wallet",
+  "rust-dlc/dlc-sled-storage-provider",
+  "rust-dlc/electrs-blockchain-provider",
+]

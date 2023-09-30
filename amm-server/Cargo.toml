@@ -1,0 +1,20 @@
+[package]
+name = "dlc-amm-server"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = "0.6.20"
+tokio = { version = "1.32.0", features = ["full"] }
+async-graphql = "6.0.6"
+sea-orm = "0.12.2"
+amm = {version = "0.1.0", path = "../amm"}
+dlc-manager = {version = "0.4.0", path = "../rust-dlc/dlc-manager"}
+dlc-sled-storage-provider = {path = "../rust-dlc/dlc-sled-storage-provider"}
+bitcoin = {version = "0.29.2"}
+bitcoin-rpc-provider = {path = "../rust-dlc/bitcoin-rpc-provider"}
+p2pd-oracle-client = {path = "../rust-dlc/p2pd-oracle-client"}
+clap = { version = "4.4.4", features = ["derive", "env"] }
+serde = { version = "1.0.188", features = ["derive"] }

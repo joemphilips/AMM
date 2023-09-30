@@ -1,0 +1,3 @@
+[submodule "rust-dlc"]
+	path = rust-dlc
+	url = https://github.com/joemphilips/rust-dlc
