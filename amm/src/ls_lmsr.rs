@@ -1,6 +1,6 @@
 use crate::{
     lmsr::{cost_function_md, price_for_purchase, price_for_showing},
-    AMMError, MarketScoringRule,
+    AMMError, CostFunctionMarketMaker,
 };
 
 /// `b` value must have certain amount for sane numerical computing
@@ -33,7 +33,7 @@ impl LSLMScoringRule {
     }
 }
 
-impl MarketScoringRule for LSLMScoringRule {
+impl CostFunctionMarketMaker for LSLMScoringRule {
     fn cost_function(&self) -> f64 {
         cost_function_md(&self.total_securities, self.b())
     }

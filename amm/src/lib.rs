@@ -2,15 +2,28 @@ pub mod cfmm;
 pub mod lmsr;
 pub mod ls_lmsr;
 pub mod lsmr_logsumexp;
+pub mod utils;
 
 pub mod dto;
 pub mod entity;
 
-use amplify::{Display, Error, From};
-use cfmm::FundingError;
+use amplify::{Display, Error, From, Wrapper};
+use cfmm::Error;
+use utils::FinitePositiveFloat;
 
 /// Purchase smaller than this will be considered as 0.
 pub const MINIMAL_PURCHASE: f64 = 0.000001;
+
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, From, Wrapper)]
+pub struct AssetId([u8;32]);
+
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+pub struct AssetInfo {
+    id: AssetId,
+    amount: FinitePositiveFloat,
+    ticker: String,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Display, Error, From)]
 #[display(doc_comments)]
@@ -22,7 +35,7 @@ pub enum AMMError {
     /// Error when tried to purchase some securities
     PurchaseError(PurchaseError),
     /// Error for funding the CFMM.
-    FundingError(FundingError),
+    FundingError(Error),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Display, Error, From)]
@@ -41,9 +54,9 @@ pub enum PurchaseError {
     /// with number of possible outcomes.
     WrongPurchaseLength,
 
-    /// Some market maker does not allow buying morethan two assets at once,
-    /// this error is returned when you tried to do so.
-    PurchaseMustBeOneAssetEach,
+    /// An user tried to purchase an asset with the same asset.
+    CannotPurchaseWithSameAsset
+
 }
 
 fn is_fine_purchase(purchase_vector: &[f64]) -> Result<(), PurchaseError> {
@@ -65,7 +78,10 @@ fn is_fine_purchase(purchase_vector: &[f64]) -> Result<(), PurchaseError> {
     Ok(())
 }
 
-pub trait MarketScoringRule {
+/// Market Maker created from particular cost-funcitn, e.g. Hanson's LMSR
+/// This is a classic example of AMM for prediction market and it has been
+/// studied for fair amount of time.
+pub trait CostFunctionMarketMaker {
     /// Total securities issued so far
     fn total_securities(&self) -> &[f64];
     fn total_securities_mut(&mut self) -> &mut [f64];
@@ -96,7 +112,7 @@ mod tests {
     use crate::lmsr::LMScoringRule as LMSR;
     use crate::ls_lmsr::LSLMScoringRule;
     use crate::lsmr_logsumexp::LMScoringRule as LogSumExpLMSR;
-    use crate::{is_fine_purchase, AMMError, MarketScoringRule};
+    use crate::{is_fine_purchase, AMMError, CostFunctionMarketMaker};
     use proptest::prelude::*;
 
     fn approx_equal(a: f64, b: f64, diff: f64) -> bool {
@@ -167,7 +183,7 @@ mod tests {
         }
     }
 
-    fn get_all_marketmakers(dimension: usize, param: f64) -> Vec<Box<dyn MarketScoringRule>> {
+    fn get_all_marketmakers(dimension: usize, param: f64) -> Vec<Box<dyn CostFunctionMarketMaker>> {
         vec![
             Box::new(LMSR::try_create(dimension, param).unwrap()),
             Box::new(LogSumExpLMSR::try_create(dimension, param).unwrap()),

@@ -1,6 +1,6 @@
 use std::f64::consts::E;
 
-use crate::{AMMError, MarketScoringRule};
+use crate::{AMMError, CostFunctionMarketMaker};
 
 /// `b` value must have certain amount for sane numerical computing
 pub const MINIMAL_LIQUIDITY_B: f64 = 0.0001;
@@ -62,7 +62,7 @@ impl LMScoringRule {
     }
 }
 
-impl MarketScoringRule for LMScoringRule {
+impl CostFunctionMarketMaker for LMScoringRule {
     fn total_securities(&self) -> &[f64] {
         &self.total_securities
     }
