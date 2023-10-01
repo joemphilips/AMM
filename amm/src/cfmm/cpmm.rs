@@ -13,42 +13,42 @@ use super::{Error as CFMMError, OrderInfo};
 /// 2. Amount of the trade is bounded, so the server can never be out of funds.
 #[derive(Debug, Clone)]
 pub struct ConstantProductMarketMaker {
-    local_asset_1: AssetInfo,
-    local_asset_2: AssetInfo,
+    base_asset: AssetInfo,
+    quote_asset: AssetInfo,
 }
 
 impl ConstantProductMarketMaker {
     fn k(&self) -> R64 {
-        self.local_asset_1.amount * self.local_asset_2.amount
+        self.base_asset.amount * self.quote_asset.amount
     }
 
-    fn is_quoted_by_asset1(&self, order: &OrderInfo) -> bool {
+    fn is_base_buy(&self, order: &OrderInfo) -> bool {
         if order.is_buy() {
-            &self.local_asset_1.id == &order.id
+            &self.base_asset.id == &order.id
         } else {
-            &self.local_asset_1.id != &order.id
+            &self.base_asset.id != &order.id
         }
     }
 
     pub fn price(&self) -> f64 {
-        (self.local_asset_1.amount / self.local_asset_2.amount).into()
+        (self.base_asset.amount / self.quote_asset.amount).into()
     }
 }
 
 impl ConstantFunctionMarketMaker for ConstantProductMarketMaker {
-    fn local_asset_1(&self) -> &AssetInfo {
-        &self.local_asset_1
+    fn base_asset(&self) -> &AssetInfo {
+        &self.base_asset
     }
 
-    fn local_asset_2(&self) -> &AssetInfo {
-        &self.local_asset_2
+    fn quote_asset(&self) -> &AssetInfo {
+        &self.quote_asset
     }
-    fn local_asset_1_mut(&mut self) -> &mut AssetInfo {
-        &mut self.local_asset_1
+    fn base_asset_mut(&mut self) -> &mut AssetInfo {
+        &mut self.base_asset
     }
 
-    fn local_asset_2_mut(&mut self) -> &mut AssetInfo {
-        &mut self.local_asset_2
+    fn quote_asset_mut(&mut self) -> &mut AssetInfo {
+        &mut self.quote_asset
     }
 
     fn price_for_order(&self, order: &OrderInfo) -> f64 {
@@ -66,12 +66,12 @@ impl ConstantFunctionMarketMaker for ConstantProductMarketMaker {
     /// Move the internal reserves, and returns the amount that user will get.
     fn order(&mut self, order: &OrderInfo) -> f64 {
         let amount_y = self.price_for_order(&order);
-        if self.is_quoted_by_asset1(&order) {
-            self.local_asset_1.amount -= order.amount;
-            self.local_asset_2.amount += amount_y;
+        if self.is_base_buy(&order) {
+            self.base_asset.amount -= order.amount;
+            self.quote_asset.amount += amount_y;
         } else {
-            self.local_asset_1.amount += order.amount;
-            self.local_asset_2.amount -= amount_y;
+            self.base_asset.amount += order.amount;
+            self.quote_asset.amount -= amount_y;
         }
 
         amount_y

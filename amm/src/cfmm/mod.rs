@@ -31,8 +31,10 @@ pub enum OrderType {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AssetIndex {
+    /// a.k.a. "Base" asset
+    Zero,
+    /// a.k.a. "Quote" asset
     One,
-    Two,
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
@@ -42,6 +44,7 @@ pub struct OrderInfo {
     amount: R64,
     order_type: OrderType,
 }
+
 impl OrderInfo {
     pub fn is_buy(&self) -> bool {
         self.order_type == OrderType::Buy
@@ -60,14 +63,14 @@ impl OrderInfo {
 }
 
 pub trait ConstantFunctionMarketMaker {
-    fn local_asset_1(&self) -> &AssetInfo;
-    fn local_asset_2(&self) -> &AssetInfo;
-    fn local_asset_1_mut(&mut self) -> &mut AssetInfo;
-    fn local_asset_2_mut(&mut self) -> &mut AssetInfo;
+    fn base_asset(&self) -> &AssetInfo;
+    fn quote_asset(&self) -> &AssetInfo;
+    fn base_asset_mut(&mut self) -> &mut AssetInfo;
+    fn quote_asset_mut(&mut self) -> &mut AssetInfo;
 
     fn asset_by_id(&self, id: &AssetId) -> Result<&AssetInfo, Error> {
-        let one = self.local_asset_1();
-        let two = self.local_asset_2();
+        let one = self.base_asset();
+        let two = self.quote_asset();
         if one.id == *id {
             Ok(one)
         } else if two.id == *id {
@@ -79,16 +82,16 @@ pub trait ConstantFunctionMarketMaker {
 
     fn asset_by_index(&self, index: AssetIndex) -> &AssetInfo {
         match index {
-            AssetIndex::One => &self.local_asset_1(),
-            AssetIndex::Two => &self.local_asset_2(),
+            AssetIndex::Zero => &self.base_asset(),
+            AssetIndex::One => &self.quote_asset(),
         }
     }
 
     fn asset_by_id_mut(&mut self, id: &AssetId) -> Result<&mut AssetInfo, Error> {
-        if &self.local_asset_1().id == id {
-            Ok(self.local_asset_1_mut())
-        } else if &self.local_asset_2().id == id {
-            Ok(self.local_asset_2_mut())
+        if &self.base_asset().id == id {
+            Ok(self.base_asset_mut())
+        } else if &self.quote_asset().id == id {
+            Ok(self.quote_asset_mut())
         } else {
             Err(Error::UnknownAssetId)
         }
@@ -96,8 +99,8 @@ pub trait ConstantFunctionMarketMaker {
 
     fn asset_by_index_mut(&mut self, index: AssetIndex) -> &mut AssetInfo {
         match index {
-            AssetIndex::One => self.local_asset_1_mut(),
-            AssetIndex::Two => self.local_asset_2_mut(),
+            AssetIndex::Zero => self.base_asset_mut(),
+            AssetIndex::One => self.quote_asset_mut(),
         }
     }
 

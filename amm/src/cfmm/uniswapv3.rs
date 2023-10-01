@@ -10,18 +10,18 @@ pub struct UniswapV3MarketMaker {
 }
 
 impl ConstantFunctionMarketMaker for UniswapV3MarketMaker {
-    fn local_asset_1(&self) -> &AssetInfo {
+    fn base_asset(&self) -> &AssetInfo {
         &self.local_asset_1
     }
 
-    fn local_asset_2(&self) -> &AssetInfo {
+    fn quote_asset(&self) -> &AssetInfo {
         &self.local_asset_2
     }
-    fn local_asset_1_mut(&mut self) -> &mut AssetInfo {
+    fn base_asset_mut(&mut self) -> &mut AssetInfo {
         &mut self.local_asset_1
     }
 
-    fn local_asset_2_mut(&mut self) -> &mut AssetInfo {
+    fn quote_asset_mut(&mut self) -> &mut AssetInfo {
         &mut self.local_asset_2
     }
 
