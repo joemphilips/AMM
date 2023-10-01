@@ -1,27 +1,19 @@
+//! Logarithmic market scoring rule
+
 use std::f64::consts::E;
 
-use crate::{AMMError, CostFunctionMarketMaker};
+use super::{AMMError, CostFunctionMarketMaker};
 
 /// `b` value must have certain amount for sane numerical computing
 pub const MINIMAL_LIQUIDITY_B: f64 = 0.0001;
 
-/// LogSumExp based on
-/// https://blog.feedly.com/tricks-of-the-trade-logsumexp/
-fn cost_function_md(inputs: &[f64], b: f64) -> Option<f64> {
-    if let Some(max) = inputs
-        .iter()
-        .max_by(|q1, q2| q1.total_cmp(q2))
-        .map(|q| q / b)
-    {
-        let tmp = inputs
-            .into_iter()
-            .map(|q| E.powf(q / b - max))
-            .sum::<f64>()
-            .ln()
-            + max;
-        return Some(b * tmp);
-    }
-    None
+/// Multi dimensional cost function
+pub(crate) fn cost_function_md(total_security: &[f64], b: f64) -> f64 {
+    b * total_security
+        .into_iter()
+        .map(|q| E.powf(q / b))
+        .sum::<f64>()
+        .ln()
 }
 
 pub(crate) fn price_for_purchase(total_security: &[f64], purchase_vector: &[f64], b: f64) -> f64 {
@@ -29,11 +21,13 @@ pub(crate) fn price_for_purchase(total_security: &[f64], purchase_vector: &[f64]
     for (i, q) in total_security.iter().enumerate() {
         total_security_after[i] = *q + purchase_vector[i];
     }
-    let a = cost_function_md(total_security_after.as_ref(), b).expect("Failed");
-    let b = cost_function_md(total_security, b).expect("Failed");
-    a - b
+    cost_function_md(total_security_after.as_ref(), b) - cost_function_md(total_security, b)
 }
 
+/// Price of the specific security at certain time.
+/// This is an special case of `price_for_purchase` function to purchase
+/// Infinitely small amount of security.
+/// And it is a partial derivatives of the cost function.
 pub(crate) fn price_for_showing(total_security: &[f64], security_index: usize, b: f64) -> f64 {
     let l = |q: &f64| E.powf(q / b);
     l(&total_security[security_index]) / total_security.iter().map(l).sum::<f64>()
@@ -63,17 +57,8 @@ impl LMScoringRule {
 }
 
 impl CostFunctionMarketMaker for LMScoringRule {
-    fn total_securities(&self) -> &[f64] {
-        &self.total_securities
-    }
-
-    fn total_securities_mut(&mut self) -> &mut [f64] {
-        self.total_securities.as_mut()
-    }
-
     fn cost_function(&self) -> f64 {
-        cost_function_md(&self.total_securities, self.liquidity)
-            .expect("Failed to compute cost function")
+        cost_function_md(&self.total_securities.as_ref(), self.liquidity)
     }
 
     fn price_for_purchase(&self, purchase_vector: &[f64]) -> f64 {
@@ -82,6 +67,13 @@ impl CostFunctionMarketMaker for LMScoringRule {
 
     fn price_for_showing(&self, security_index: usize) -> f64 {
         price_for_showing(&self.total_securities, security_index, self.liquidity)
+    }
+
+    fn total_securities(&self) -> &[f64] {
+        self.total_securities.as_ref()
+    }
+    fn total_securities_mut(&mut self) -> &mut [f64] {
+        self.total_securities.as_mut()
     }
 
     fn bounded_loss(&self) -> Option<f64> {

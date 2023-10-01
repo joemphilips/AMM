@@ -1,4 +1,3 @@
-
 use noisy_float::prelude::*;
 
 use crate::AssetInfo;
@@ -6,8 +5,8 @@ use crate::AssetInfo;
 use super::ConstantFunctionMarketMaker;
 
 pub struct UniswapV3MarketMaker {
-  local_asset_1: AssetInfo,
-  local_asset_2: AssetInfo,
+    local_asset_1: AssetInfo,
+    local_asset_2: AssetInfo,
 }
 
 impl ConstantFunctionMarketMaker for UniswapV3MarketMaker {

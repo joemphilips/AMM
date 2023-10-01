@@ -1,9 +1,11 @@
-
 use noisy_float::types::R64;
 
-use crate::{cfmm::ConstantFunctionMarketMaker, PurchaseError, AssetInfo, AssetId, utils::FinitePositiveFloat};
+use crate::{
+    cfmm::ConstantFunctionMarketMaker, cost_function::PurchaseError, utils::FinitePositiveFloat,
+    AssetId, AssetInfo,
+};
 
-use super::{OrderInfo, Error as CFMMError};
+use super::{Error as CFMMError, OrderInfo};
 
 /// `ConstantProductMarketMaker` was originally used in Uniswap V2.
 /// It has following advantages
@@ -12,7 +14,7 @@ use super::{OrderInfo, Error as CFMMError};
 #[derive(Debug, Clone)]
 pub struct ConstantProductMarketMaker {
     local_asset_1: AssetInfo,
-    local_asset_2: AssetInfo
+    local_asset_2: AssetInfo,
 }
 
 impl ConstantProductMarketMaker {
@@ -31,9 +33,7 @@ impl ConstantProductMarketMaker {
     pub fn price(&self) -> f64 {
         (self.local_asset_1.amount / self.local_asset_2.amount).into()
     }
-
 }
-
 
 impl ConstantFunctionMarketMaker for ConstantProductMarketMaker {
     fn local_asset_1(&self) -> &AssetInfo {
@@ -54,10 +54,12 @@ impl ConstantFunctionMarketMaker for ConstantProductMarketMaker {
     fn price_for_order(&self, order: &OrderInfo) -> f64 {
         let k = self.k();
         let amount_before = self.asset_by_index(order.index).amount;
-        let y = k / (
-            if order.is_buy() { amount_before - order.amount }
-            else { amount_before + order.amount }
-        );
+        let y = k
+            / (if order.is_buy() {
+                amount_before - order.amount
+            } else {
+                amount_before + order.amount
+            });
         y.into()
     }
 

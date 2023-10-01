@@ -8,7 +8,7 @@ fn validate(value: f64) -> Result<(), String> {
         return Err("Value is nan".to_owned());
     }
     if value.is_infinite() {
-      return Err("Value is infinite".to_owned())
+        return Err("Value is infinite".to_owned());
     }
     if value.is_sign_negative() {
         return Err("Value is negative".to_owned());
@@ -20,8 +20,8 @@ impl TryFrom<f64> for FinitePositiveFloat {
     type Error = String;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-      validate(value)?;
-      return Ok(Self(value))
+        validate(value)?;
+        return Ok(Self(value));
     }
 }
 
@@ -48,5 +48,7 @@ impl std::ops::Div for FinitePositiveFloat {
 }
 
 impl FinitePositiveFloat {
-    pub fn inner(&self) -> f64 { self.0 }
+    pub fn inner(&self) -> f64 {
+        self.0
+    }
 }
