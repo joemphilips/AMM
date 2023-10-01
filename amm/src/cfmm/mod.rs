@@ -1,13 +1,16 @@
 //! Constant Function Market Makers (CFMM)
+//! Also known as trading-function based market maker.
 //! This includes
 //! 1. UniswapV2-style Constant Product Market Maker (CPMM)
 //!
 //!
 
 use amplify::{Display, Error, From};
+use noisy_float::types::R64;
 
-use crate::{PurchaseError, AssetId};
+use crate::{PurchaseError, AssetId, AssetInfo};
 pub mod cpmm;
+pub mod uniswapv3;
 
 /// Error when user tries to fund the AMM>
 #[derive(Clone, Debug, PartialEq, Eq, Display, Error, From)]
@@ -26,10 +29,17 @@ pub enum OrderType {
   Sell,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum AssetIndex {
+  One,
+  Two
+}
+
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct OrderInfo {
+  index: AssetIndex,
   id: AssetId,
-  amount: f64,
+  amount: R64,
   order_type: OrderType
 }
 impl OrderInfo {
@@ -37,35 +47,57 @@ impl OrderInfo {
 }
 
 impl OrderInfo {
-  fn try_create(id: AssetId, amount: f64, order_type: OrderType) -> Result<Self, PurchaseError> {
-      if amount.is_nan() || amount.is_infinite() {
-          return Err(PurchaseError::NonNormalPurchase);
-      }
-      if amount.is_sign_negative() {
-          return Err(PurchaseError::NegativePurchase);
-      }
-      Ok(Self { id, amount, order_type })
+  pub fn new(index: AssetIndex, id: AssetId, amount: R64, order_type: OrderType) -> Self {
+      Self { index, id, amount, order_type }
   }
 }
 
 
 pub trait ConstantFunctionMarketMaker {
-    fn local_assets(&self) -> &[f64];
-    fn local_assets_mut(&mut self) -> &mut [f64];
+    fn local_asset_1(&self) -> &AssetInfo;
+    fn local_asset_2(&self) -> &AssetInfo;
+    fn local_asset_1_mut(&mut self) -> &mut AssetInfo;
+    fn local_asset_2_mut(&mut self) -> &mut AssetInfo;
 
-    fn fund(&mut self, fund_vector: &[f64]) -> Result<(), Error> {
-        let assets = self.local_assets_mut();
-        if fund_vector.len() != assets.len() {
-            return Err(Error::InvalidAssetCount);
-        }
-        for (a, f) in assets.iter_mut().zip(fund_vector) {
-            *a += f;
-        }
+    fn asset_by_id(&self, id: &AssetId) -> Result<&AssetInfo, Error> {
+        let one = self.local_asset_1();
+        let two = self.local_asset_2();
+        if one.id == *id { Ok(one) }
+        else if two.id == *id { Ok(two) }
+        else { Err(Error::UnknownAssetId) }
+    }
 
+    fn asset_by_index(&self, index: AssetIndex) -> &AssetInfo {
+      match index {
+        AssetIndex::One => &self.local_asset_1(),
+        AssetIndex::Two => &self.local_asset_2()
+      }
+    }
+
+    fn asset_by_id_mut(&mut self, id: &AssetId) -> Result<&mut AssetInfo, Error> {
+        if &self.local_asset_1().id == id { Ok(self.local_asset_1_mut()) }
+        else if &self.local_asset_2().id == id { Ok(self.local_asset_2_mut()) }
+        else { Err(Error::UnknownAssetId) }
+    }
+
+    fn asset_by_index_mut(&mut self, index: AssetIndex) -> &mut AssetInfo {
+      match index {
+        AssetIndex::One => self.local_asset_1_mut(),
+        AssetIndex::Two => self.local_asset_2_mut()
+      }
+    }
+
+    fn fund(&mut self, asset_info: &AssetInfo) -> Result<(), Error> {
+        let asset = self.asset_by_id_mut(&asset_info.id)?;
+        asset.amount += asset_info.amount;
         Ok(())
     }
 
-    fn price_for_purchase(&self, order_info: &OrderInfo) -> f64;
+    /// Returns an amount of token which this market maker can offer according
+    /// to the order.
+    /// Returns error for unknown asset id.
+    fn price_for_order(&self, order: &OrderInfo) -> f64;
 
-    fn purchase(&mut self, order_info: &OrderInfo, index_to_buy: usize) -> Result<f64, PurchaseError>;
+    fn order(&mut self, order: &OrderInfo) -> f64;
+
 }

@@ -9,7 +9,7 @@ pub mod entity;
 
 use amplify::{Display, Error, From, Wrapper};
 use cfmm::Error;
-use utils::FinitePositiveFloat;
+use noisy_float::types::R64;
 
 /// Purchase smaller than this will be considered as 0.
 pub const MINIMAL_PURCHASE: f64 = 0.000001;
@@ -21,7 +21,7 @@ pub struct AssetId([u8;32]);
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct AssetInfo {
     id: AssetId,
-    amount: FinitePositiveFloat,
+    amount: R64,
     ticker: String,
 }
 

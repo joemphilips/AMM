@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
 pub struct FinitePositiveFloat(pub(crate) f64);
 
